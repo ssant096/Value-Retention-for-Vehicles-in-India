@@ -1,0 +1,509 @@
+---
+title: "Factors Correlated with Value Retention Amongst Motor Vehicles in India"
+author: "Shan Santhakumar, David Alber, Leo Shi"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{=tex}
+\newpage
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+\listoftables
+\newpage
+```
+# Introduction
+
+Our research question is what factors lead to value retention in motor vehicles. We are interested in this topic because motor vehicles are a big investment and it would be useful to know how one can best retain the value of a motor vehicle, so as not to face too big of a financial loss when purchasing one. Additionally, this information could benefit those looking to get a motor vehicle for a discounted price as they could look at motor vehicles with characteristics that cause them to lose their value and therefore get a good deal on a motor vehicle.
+
+## The Data
+
+Our dataset had 301 observations of motor vehicle sales which were scrapped from websites in India. Each observation contained 9 variables.
+
+-   Car_Name
+-   Year
+-   Selling_Price
+-   Present_Price
+-   Kms_Driven
+-   Fuel_Type
+-   Seller_Type
+-   Transmission
+-   Owner
+
+However, in order to extract more meaningful data, we converted Selling_Price and Present_Price from its original units which were Lakhs (100,000) of Indian Rupees into US dollars. We also converted Kms_Driven into miles driven, so it is easier for us to interpret. Lastly, in order to quantify the response variable we wished to obtain we created a new variable to store the Relative Value Retention Percentage (RVRP) of each motor vehicle, using the formula:
+
+$$RVRP = 1 - \frac{Present\_Price - Selling\_Price}{Present\_Price}$$
+
+## EDA
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r, echo=FALSE}
+library(readxl)
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(GGally)
+
+carData = read_excel(file.choose())
+
+# Conversion Indian Lakh to USD
+carData$Present_Price = carData$Present_Price*1203.06 
+carData$Selling_Price = carData$Selling_Price*1203.06
+
+# Convert KM to Miles
+miles = carData$Kms_Driven*0.6214
+carData$Mileage = miles
+
+# Create Variable ValueRetentionPercent
+Depreciation = carData$Present_Price - carData$Selling_Price
+ValueRetentionPercent =  1 - (Depreciation / carData$Present_Price)
+carData$RVRP = ValueRetentionPercent
+```
+
+```{r fig.alighn='center', fig.cap = "Histogram of Response Variable", echo=FALSE}
+# Plot Histogram of Response Variable
+ggplot(carData, aes(x=RVRP)) + geom_histogram(binwidth=0.01)
+```
+
+```{r fig.alighn='center', fig.cap = "Histogram of Exploratory Variables", echo=FALSE}
+# Plot eda histograms
+h1<-ggplot(carData, aes(x=Year)) + geom_histogram(binwidth=1)
+h2<-ggplot(carData, aes(x=Mileage)) + geom_histogram(binwidth=10000)
+h3<-ggplot(carData, aes(x=Fuel_Type)) + geom_histogram(stat="count")
+h4<-ggplot(carData, aes(x=Seller_Type)) + geom_histogram(stat="count")
+h5<-ggplot(carData, aes(x=Transmission)) + geom_histogram(stat="count")
+h6<-ggplot(carData, aes(x=Owner)) + geom_histogram(stat="count")
+grid.arrange(h1,h2,h3,h4,h5,h6, ncol = 3)
+```
+
+```{r fig.alighn='center', fig.cap = "Predictor vs Response Scatterplot/Boxplot", echo=FALSE}
+# Plot eda predictor vs response
+s1<-ggplot(carData, aes(x=Mileage, y=RVRP)) + geom_point()
+s2<-ggplot(carData, aes(x=Year, y=RVRP)) + geom_point()
+s3<-ggplot(carData, aes(x=Owner, y=RVRP)) + geom_point()
+box1<-ggplot(carData, aes(x=Fuel_Type, y=RVRP)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=4)
+box2<-ggplot(carData, aes(x=Seller_Type, y=RVRP)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=4)
+box3<-ggplot(carData, aes(x=Transmission, y=RVRP)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=4)
+grid.arrange(s1,s2,s3,box1,box2,box3, ncol = 3)  
+
+
+```
+
+## Summary Statistics
+
+```{r, echo=FALSE, eval=FALSE}
+## Summary Statistics
+sapply(carData[,c(2,3,4,5,9,10,11)], summary)
+sapply(carData[,c(2,3,4,5,9,10,11)], sd)
+```
+
+```{=tex}
+\begin{table}
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline 
+Variable & Min & Max & Median & SD & Description\\
+\hline 
+Year & 2003 & 2018 & 2014 & 2.89 & Year the vehicle was sold.\\
+\hline 
+Selling\_Price & \$120.31 & \$42,107.10 & \$4,331.02 & 6,114.93 & Price vehicle was sold at.\\
+\hline
+Present\_Price & \$384.98 & \$111,403.36 & \$7,699.58 & \$10,399.39 & Original price of vehicle.\\
+\hline
+Owner & 0 & 3 & 0 & 0.2479 & Number of previous owners.\\
+\hline
+Mileage & 310.7 & 310,700 & 19,884.8 & 24,164.3 & Number of miles vehicle has on it.\\
+\hline
+RVRP & 0.1054 & 0.9893 & 0.6546 & 0.2024 & Percent of value vehicle has retained (as a decimal).\\
+\hline
+\end{tabular}
+\end{center}
+\caption{Data Summary Statistics}
+\end{table}
+```
+From our summary statistics (see Table 1), we discovered that the vehicle that sold for the lowest price was a Bajaj Pulsar 150, a motorcycle sold in 2006 for only \$120.31. While the vehicle that sold for the most is a Toyota Land Cruiser, an SUV which was sold in 2010 for \$42,107.10. We have year of purchase ranging from 2003 to 2018, number of owners ranging from 0 to 3, and original price of the vehicle ranging from \$384.98 up to \$111,403.36. Our variable of interest, RVRP, also has quite the range with some vehicles retaining as little as 10.54% of its original value and others retaining up to 98.93% of its original value. From this summary of our data, we get an idea of what range our data covers. When making models and conclusions using this data we can avoid extrapolation by keeping our scope within the bounds of this particular dataset.
+
+# Regression Analysis
+
+## Final Model
+
+```{r, echo=FALSE}
+car.final.mlr = lm(RVRP ~ Year + I(Year^2) + Owner + Mileage + Year*Mileage, data = carData)
+summary(car.final.mlr)
+```
+
+Our final model is:\
+$RVRP = 7386 - 7.402*Year + 0.001854*Year^2 - 0.06773*Owner + 0.0004307*Mileage - 2.147*10^{-7}*Year*Mileage$
+
+The residuals for our final model satisfies the linearity, constant variance, and normality assumptions, however it does not satisfy the independence assumption (see "Checking Assumptions of Final Model" in Appendix for details). Our model has an R\^2 value of 0.7562, meaning 75.62% of the variance in RVRP can be explained by our model. However, since our data does not satisfy the independence assumption, we cannot make conclusions outside of our sample.
+
+## Processs of Obtaining the Final Model
+
+When obtaining our final model, we began with our stepwise regression model (see "Building a Stepwise Regression Model" in Appendix for details). We took the variables discovered to be of significant contribution to our response variable, RVRP, from our stepwise model and looked to see if the addition of second order and interaction terms would improve the residuals further and create an even more accurate model. These variables were Year, Mileage, Owner, and Fuel_Type. In order to determine which interaction and second order term would be needed, if any at all, we looked at the residuals for each individual variable one at a time and found their functional forms by trial and error and moved from one variable to the next. We knew we found a variable's proper functional form when its residuals no longer showed a pattern. After going through this process for each variable from our stepwise regression model, we arrived at our final model.
+
+*Note: We did not consider any transformations on our response variable (RVRP) as it was already normally distributed (see figure 1).*
+
+## Alternate Model Considerations
+
+Models we excluded include the initial step wise regression model we made as well as any models with interaction terms with the categorical variable, Fuel_Type, as we ultimately found Fuel_Type to not have a significant relationship with our response variable (see "Recovering Function Form" in Appendix for details). We also tried models removing some of the variables from the final model we ended up with, however all of the variables in our final model contributed a significant amount to our Y variable (see "Alternate Model Considerations" in Appendix for details).
+
+# Conclusion
+
+Based on our final model, we would suggest that for those that want a vehicle to retain as much of its value as possible, to make sure that the vehicle has as few previous owners as possible, has driven the least possible number of miles possible, and is as new as possible. Those that want to find a good deal on a car should do the opposite, find a car with as many previous owner as possible, with the most miles driven as possible, and have the car be as old as possible. However, it is important to keep in mind that this recommendation is only applicable to this sample, and may not be applicable to data outside of this sample.
+
+We came to this conclusion based on the fact that the coefficient of the Year\^2 term in our model is positive, which would indicate an upward facing curve between Year and RVRP, therefore newer cars will keep more of their original value. Since Owner has a negative coefficient, more owners decreases RVRP, and since Mileage and the Interaction between Year and Mileage is negative, then as Mileage increases RVRP is expected to decrease.
+
+# Limitations
+
+Our model failed to meet the independence of errors assumption, therefore it cannot be said to be representative of data outside of our sample. In order for us to meet this assumption, we would either have to collect additional data or clean up our current data until it satisfies our independence assumption.
+
+Additionally, we only had 301 observations originating from India, and the data collection method was described vaguely. The only information we were given about how the data was collected was that it was scrapped from the web, therefore we were unable to determine an accurate population for this data.
+
+Lastly, our final model assumes that our stepwise regression model selected all of the variables relevant for explaining RVRP. It should be noted that the other two categorical variables not included in the stepwise model, Seller_Type and Transmission, which we did not consider interaction terms for in our final model, may have been able to improve our model. The other variable we did not account for as we felt it would be challenging to incorporate into our model given our time constraints, was the name of the vehicle. The name of a vehicle, and the associated brand recognition that comes with a vehicle's name could very well have an effect on that vehicle's value retention.
+
+# Appendix
+
+## Check for Collinearity in Variables
+
+```{r fig.alighn='center', fig.cap = "Correlation Matrix", echo=FALSE}
+# remove unused columns (Car_Name, Selling_Price, Present_Price, Kms_Driven)
+carData2 <- carData[-c(1, 3, 4, 5)]
+
+# create correlation matrix
+ggpairs(carData2)+ theme(axis.text.y=element_text(size=10),
+                        axis.text.x=element_text(angle=45, size=10),
+                        strip.text.y=element_text(angle=0, hjust=0))
+```
+
+Our predictor variables do not seem to have strong correlations with one another from the correlation matrix, with the highest correlations between predictors being between year and mileage at -0.524 and Owner and Year at -0.182. However, in order to determine if these correlations will cause multicollinearity issues, further testing will be required.
+
+### Multicollinearity: Non Significant t-tests for all (or nearly all) independent variables when the overall F-test is significant
+
+```{r, echo=FALSE}
+car.mlr = lm(RVRP ~ Year+Fuel_Type+Seller_Type+Transmission+Owner+Mileage, data = carData2)
+summary(car.mlr)
+```
+
+The F-test for H0: $\beta_1 = \beta_2 = \beta_3 = \beta_4 = \beta_5 = \beta_6 = \beta_7 = 0$ is highly significant (F=117.7, p-value=2.2e-16). Therefore we can reject H0 for any $\alpha$ greater than 0.0001 and conclude that at least one of the parameters $\beta_1, \beta_2, \beta_3, \beta_4, \beta_5, \beta_6, \beta_7$ is nonzero.
+
+The t-tests for Seller_Type, Fuel_Type, and Transmission, however, are nonsignificant, thus are less likely to end up in the final model.
+
+### Multicollinearity: Opposite signs (from what is expected) in the estimated parameters
+
+From data from a Progressive Car Insurance article we expect value retention, y, to increase when Year sold (X1) increases or when Fuel Type changes from CNG (X2 & X3). Y will decrease when the number of owners (X6) or mileage (X7) increases. Therefore Progressive expects a positive relationship between y and X1, X2 and X3 , and a negative relationship with y and X6 and X7, which supports what is seen by the output.
+
+### Multicollinearity: Variance Inflation Factor (VIF) for a beta parameter greater than 10
+
+```{r, echo=FALSE}
+library(car)
+vif(car.mlr)
+```
+
+No VIF values are greater than 10, therefore our explanatory variables do not seem significantly correlated, therefore we will proceed onto our stepwise regression model without dropping any of these variables.
+
+## Building a Stepwise Regression Model
+
+```{r, echo=FALSE}
+# Specify a null model with no predictors
+null_model <- lm(RVRP ~ 1, data = carData2)
+
+# Specify the full model using all of the potential predictors
+full_model <- lm(RVRP ~ ., data = carData2)
+
+# Use a stepwise algorithm to build a parsimonious model
+step_model1 <- step(null_model, scope = list(lower = null_model, 
+                                             upper = full_model), 
+                    direction = "both",test="F")
+```
+
+After running our stepwise model selection using both forward and backward selection, our model chose Year, Mileage, Fuel_Type and Owner as the most significant variables that will give the lowest AIC value and therefore create the best model.
+
+```{r, echo=FALSE}
+summary(step_model1)
+```
+
+From the summary of our stepwise model selection, we can see that this model has an R\^2 value of 0.733, so 73.3% of the variance in RVRP can be explained by the variables Year, Mileage, Fuel_Type and Owner. Moreover, there is a positive relationship between Year and Fuel_Type and RVRP and a negative correlation between the variables Mileage and Owner and RVRP.
+
+### Checking Assumptions for Stepwise Model
+
+**Linearity**
+
+```{r fig.alighn='center', fig.cap = "Residuals of Stepwise Model", echo=FALSE}
+linear_plot1 = ggplot(data =step_model1, aes(x = .fitted, y = .resid)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(x = "Predicted values", y = "Residuals")
+
+linear_plot2 = ggplot(data =step_model1, aes(x = Year, y = .resid)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(x = "Year", y = "Residuals")
+
+linear_plot3 = ggplot(data =step_model1, aes(x = Mileage, y = .resid)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(x = "Mileage", y = "Residuals")
+
+linear_plot4 = ggplot(data =step_model1, aes(x = Fuel_Type, y = .resid)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(x = "Fuel Type", y = "Residuals")
+
+linear_plot5 = ggplot(data =step_model1, aes(x = Owner, y = .resid)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(x = "Number of Owners", y = "Residuals")
+
+
+grid.arrange(linear_plot1, linear_plot2, linear_plot3, linear_plot4,
+             linear_plot5,  ncol = 3)
+```
+
+The plot of residuals vs. predicted does not show a pattern.\
+The plot of residuals vs. Year does not show a pattern.\
+The plot of residuals vs. Mileage does not show a pattern.\
+The plot of residuals vs. Fuel Type does not show a pattern.\
+The plot of residuals vs. Number of Owners does not show a pattern.\
+The linearity condition is satisfied for all significant explanatory variables.
+
+**Constant Variance**
+
+The vertical spread of the residuals is nearly constant across the plot for the residuals of our model. Therefore, the constant variance condition is satisfied.
+
+**Normality**
+
+```{r fig.alighn='center', fig.cap = "Normality Plots for Stepwise Model", echo=FALSE}
+par(mfrow = c(1, 2))
+p1 = ggplot(data =step_model1, aes(x = .resid)) +geom_histogram()
+p2 = ggplot(data =step_model1, aes(x = .resid)) +geom_boxplot()
+grid.arrange(p1,p2, ncol = 2)
+qqnorm(resid(step_model1))
+qqline(resid(step_model1))
+```
+
+```{r, echo=FALSE}
+shapiro.test(resid(step_model1))
+```
+
+Histogram, qqplot and Shapiro-Wilk test (p-value=0.1032) all suggest that residuals appear to be normally distributed, therefore our data passes the normality assumption.
+
+**Independence**
+
+```{r, echo=FALSE}
+library(car)
+dwt(step_model1)
+```
+
+Since the p-value for Durbin-Watson test is less than 0.05, we can reject the null hypothesis and conclude that the residuals in this regression model are auto correlated. With the failed independence test for Y, the team concluded that extra data is needed/data needs to be cleaned and that the data is not representative of the population so the data can only be representative of this specific sample.
+
+## Recovering Functional Form
+
+Based on the residuals of our stepwise regression model it seems that our model may require further transformation of our x values and the inclusion of some interaction terms in order to create a more accurate model.
+
+```{r fig.alighn='center', fig.cap = "Finding Functional Form: Original Residuals", echo=FALSE}
+# Recovering Functional Form
+
+s1<-ggplot(carData, aes(x=Year, y=RVRP)) + geom_point()
+s2<-ggplot(carData, aes(x=Owner, y=RVRP)) + geom_point()
+s3<-ggplot(carData, aes(x=Mileage, y=RVRP)) + geom_point()
+
+grid.arrange(s1,s2,s3, ncol = 1)  
+```
+
+Year appears to have the most obvious relationship with Y (RVRP). If year is not linear then it appears to have a slight quadratic relationship with RVRP. Therefore, we will try adding a Year\^2 term to our model. For building our model, we will refer to RVRP as Y, Year as X1, Owner as X6 and Mileage as X7.
+
+```{r fig.alighn='center', fig.cap = "Residuals After Adding Year^2 Term", echo=FALSE}
+Y = carData$RVRP
+X1 = carData$Year
+X6 = carData$Owner
+X7 = carData$Mileage
+
+X1sq<-X1^2
+lm1<-lm(Y~0+X1 + X1sq)
+Y1<-Y-lm1$fitted.values
+p1 = ggplot(carData, aes(x=X1, y=Y1)) + geom_point()
+p2 = ggplot(carData, aes(x=Y1)) + geom_histogram()
+grid.arrange(p1,p2, ncol = 2)
+
+```
+
+After adding X1ˆ2 to our model, the distribution of errors now appears slightly bi modal. There still seems to be a slight pattern to the residuals, therefore we will need to add an additional term.
+
+```{r fig.alighn='center', fig.cap = "Residuals After Adding Year*Mileage Interaction Term", echo=FALSE}
+lm2<-lm(Y~0+X1 + X1sq + X1*X7)
+Y2<-Y-lm2$fitted.values
+p1 = ggplot(carData, aes(x=X1, y=Y2)) + geom_point()
+p2 = ggplot(carData, aes(x=Y2)) + geom_histogram()
+grid.arrange(p1,p2, ncol = 2)
+```
+
+After adding an interaction between X1 and X7 the pattern in the residuals has gone away. Now we found the functional form of X1 and can move on to the other terms. Additionally the error now seems more normally distributed, which is another indication that we are headed in the right direction.
+
+```{r fig.alighn='center', fig.cap = "Residuals of Owner (X6) and Mileage (X7)", echo=FALSE}
+p1 = ggplot(carData, aes(x=X6, y=Y2)) + geom_point()
+p2 = ggplot(carData, aes(x=X7, y=Y2)) + geom_point()
+grid.arrange(p1,p2, ncol = 2)
+```
+
+We are just left with X6 and X7, let us see how Y relates to X6 and X7 at different levels of fuel type.
+
+```{r fig.alighn='center', fig.cap = "Residuals of Owner and Mileage at Different Levels of Fuel Type", echo=FALSE}
+par(mfrow = c(1, 2))
+plot(X6,Y1, type="n")
+points(X6[carData$Fuel_Type == "CNG"],Y1[carData$Fuel_Type == "CNG"], col="green")
+points(X6[carData$Fuel_Type == "Diesel"],Y1[carData$Fuel_Type == "Diesel"], col="blue")
+points(X6[carData$Fuel_Type == "Petrol"],Y1[carData$Fuel_Type == "Petrol"], col="red")
+
+plot(X7,Y1, type="n")
+points(X7[carData$Fuel_Type == "CNG"],Y1[carData$Fuel_Type == "CNG"], col="green")
+points(X7[carData$Fuel_Type == "Diesel"],Y1[carData$Fuel_Type == "Diesel"], col="blue")
+points(X7[carData$Fuel_Type == "Petrol"],Y1[carData$Fuel_Type == "Petrol"], col="red")
+```
+
+There does not seem to be any interaction term between fuel type and X6 and X7, therefore the categorical variable Fuel_Type is not needed and will be dropped from our model.
+
+```{r fig.alighn='center', fig.cap = "Residuals after Adding First Order Owner Term", echo=FALSE}
+par(mfrow = c(1, 2))
+lm2<-lm(Y1~0+X6)
+Y2<-Y1-lm2$fitted.values
+plot(X6,Y2)
+hist(Y2)
+```
+
+We will add just the linear term for X6 as no other relationship would prove to be a better fit, and the residuals do appear more evenly spread out afterwards. The residuals appear to show a decreasing telescoping pattern, however that can likely be attributed to a lack of data points for cars with more owners. Lastly, our distribution of errors appears more normally distributed as well.
+
+```{r fig.alighn='center', fig.cap = "Residuals after Adding First Order Mileage Term", echo=FALSE}
+par(mfrow = c(1, 2))
+lm3<-lm(Y2~0+X7)
+Y3<-Y2-lm3$fitted.values
+plot(X7,Y3)
+hist(Y3)
+```
+
+We will just keep the linear term for X7 as no other relationship would prove to be a better fit, and the residuals do appear more evenly spread out afterwards. The residuals appear to show a decreasing telescoping pattern, however that can likely be attributed to a lack of data points at higher mileages. The errors now seem to follow a normal distribution, which further affirms we have reached the correct functional form.
+
+Therefore our final model takes the form Y = X1 + X6 + X7 + X1\^2 + X1\*X7.
+
+### Checking for Multicollinearity in Final Model
+
+Multicollinearity: Non Significant t-tests for all (or nearly all) independent variables when the overall F-test is significant
+
+```{r, echo=FALSE}
+# Check for collinearity issues
+car.final.mlr = lm(RVRP ~ Year + I(Year^2) + Owner + Mileage + Year*Mileage, data = carData2)
+summary(car.final.mlr)
+```
+
+The F-test for H0: $\beta_1 = \beta_2 = \beta_3 = \beta_4 = \beta_5 = \beta_6 = \beta_7 = 0$ is highly significant (F=187.1, p-value=2.2e-16) and all of our terms are also significant, so this does not seem to indicate a multicollinearity issue.
+
+Multicollinearity: Opposite signs (from what is expected) in the estimated parameters
+
+From data from a Progressive Car Insurance article we expect value retention, y, to increase when Year sold (X1) increases. Y will decrease when the number of owners (X6) or mileage (X7) increases. Therefore Progressive expects a positive relationship between y and X1, and a negative relationship with y and X6 and X7, however our model shows a negative relationship with X1 and a positive relationship with X7, while X6 is negative like progressive expects. The cause for this discrepancy may be due to the fact that there are interaction terms and second order terms included in our model. The interaction term between year and mileage (X1 and X7) is negative and the second order term for X1 is positive so these values likely balance out and lead to the correct interpretations when they are all taken into consideration.
+
+Multicollinearity: Variance Inflation Factor (VIF) for a beta parameter greater than 10
+
+```{r, echo=FALSE}
+library(car)
+vif(car.final.mlr)
+```
+
+Year, Year\^2, Mileage, and Year\*Mileage all have vif scores greater than 10, however this is expected since they are all either interaction terms or a second order terms and therefore we expect them to be correlated to one another, so this is not an issue.
+
+### Checking Assumptions of Final Model
+
+**Linearity**
+
+```{r fig.alighn='center', fig.cap = "Residual Plots for Final Model", echo=FALSE}
+# Check for linearity
+linear_plot1 = ggplot(data =car.final.mlr, aes(x = .fitted, y = .resid)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(x = "Predicted values", y = "Residuals")
+
+linear_plot2 = ggplot(data =car.final.mlr, aes(x = Year, y = .resid)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(x = "Year", y = "Residuals")
+
+linear_plot3 = ggplot(data =car.final.mlr, aes(x = Mileage, y = .resid)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(x = "Mileage", y = "Residuals")
+
+linear_plot4 = ggplot(data =car.final.mlr, aes(x = Owner, y = .resid)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(x = "Number of Owners", y = "Residuals")
+
+grid.arrange(linear_plot1, linear_plot2, linear_plot3, linear_plot4,  ncol = 3)
+```
+
+The plot of residuals vs. predicted does not show a pattern.\
+The plot of residuals vs. Year does not show a pattern.\
+The plot of residuals vs. Mileage does not show a pattern.\
+The linearity condition is satisfied for all significant explanatory variables.
+
+**Constant Variance**
+
+The vertical spread of the residuals is nearly constant across the plot for the residuals of our model. Therefore, the constant variance condition is satisfied.
+
+**Normality**
+
+```{r fig.alighn='center', fig.cap = "Normality Plots for Final Model", echo=FALSE}
+# normality testing
+par(mfrow = c(1, 2))
+p1 = ggplot(data =car.final.mlr, aes(x = .resid)) +geom_histogram()
+p2 = ggplot(data =car.final.mlr, aes(x = .resid)) +geom_boxplot()
+grid.arrange(p1,p2, ncol = 2)
+qqnorm(resid(car.final.mlr))
+qqline(resid(car.final.mlr))
+```
+
+```{r, echo=FALSE}
+shapiro.test(resid(car.final.mlr))
+```
+
+Histogram, qqplot and Shapiro-Wilk test (p-value=0.07079) all suggest that residuals appear to be normally distributed.
+
+**Independence**
+
+```{r, echo=FALSE}
+# independence testing
+library(car)
+dwt(car.final.mlr)
+```
+
+Since the p-value for Durbin-Watson test is less than 0.05, we can reject the null hypothesis and conclude that the residuals in this regression model are auto correlated. With the failed independence test for Y, the team concluded that extra data is needed/data needs to be cleaned and that the data is not representative of the population so the data can only be representative of this specific sample.
+
+## Alternate Model Considerations
+
+```{r, echo=FALSE}
+## Checking alternative models
+car.final.mlr2 = lm(RVRP ~ Year + I(Year^2) + Mileage + Year*Mileage, data = carData2)
+summary(car.final.mlr2)
+car.final.mlr3 = lm(RVRP ~ Year + I(Year^2) + Mileage, data = carData2)
+summary(car.final.mlr3)
+car.final.mlr4 = lm(RVRP ~ Year + I(Year^2), data = carData2)
+summary(car.final.mlr4)
+anova(car.final.mlr, car.final.mlr2)
+anova(car.final.mlr, car.final.mlr3)
+anova(car.final.mlr, car.final.mlr4)
+```
+
+## All Code for Report
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
